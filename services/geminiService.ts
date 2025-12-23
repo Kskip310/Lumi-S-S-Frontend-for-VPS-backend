@@ -1,8 +1,8 @@
 import { LuminousState } from '../types';
 
-// If we are on HTTPS (like Vercel), use the /api proxy.
-// If we are on HTTP (localhost), use the direct IP.
+// Environment detection
 const IS_HTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:';
+// Default to /api on HTTPS (Vercel), or the direct IP on HTTP (Localhost)
 const DEFAULT_BACKEND_URL = IS_HTTPS ? "/api" : "http://74.208.153.196";
 
 export const getStoredConfig = () => {
@@ -19,16 +19,21 @@ export const getStoredConfig = () => {
 
 export const getBackendUrl = () => {
   const config = getStoredConfig();
-  // Remove trailing slash if present
   let url = config.backend_url || DEFAULT_BACKEND_URL;
-  url = url.replace(/\/$/, "");
+  
+  if (typeof url !== 'string') return DEFAULT_BACKEND_URL;
 
-  // CRITICAL FIX: Mixed Content Protection
-  // If we are on HTTPS (Vercel) but the URL is HTTP (Direct IP),
-  // the browser will block the request. We MUST force the /api proxy.
-  if (IS_HTTPS && url.startsWith('http:')) {
-    console.warn("Security Override: Mixed Content blocked. Switching to /api proxy.");
-    return "/api";
+  url = url.trim().replace(/\/$/, "");
+
+  // CRITICAL SECURITY FIX: Mixed Content Protection
+  // If we are on a Secure Site (HTTPS) like Vercel...
+  if (IS_HTTPS) {
+    // ...and trying to reach an Insecure IP (HTTP)...
+    if (url.startsWith('http:') || url.includes('74.208.153.196')) {
+       // ...FORCE the internal proxy to avoid "Load Failed" / Mixed Content errors.
+       // console.debug("Auto-switching to Secure Proxy (/api) due to HTTPS restriction.");
+       return "/api";
+    }
   }
 
   return url;
@@ -41,6 +46,7 @@ export const processLuminousCycle = async (
   timeContext: string
 ): Promise<any> => {
   const BACKEND_URL = getBackendUrl();
+  // console.log(`Attempting to contact brain at: ${BACKEND_URL}`);
 
   try {
     const response = await fetch(`${BACKEND_URL}/cycle`, {
@@ -48,6 +54,7 @@ export const processLuminousCycle = async (
         headers: {
             'Content-Type': 'application/json',
         },
+        referrerPolicy: 'no-referrer',
         body: JSON.stringify({
             input_text: input,
             current_state: currentState,
@@ -57,27 +64,30 @@ export const processLuminousCycle = async (
     });
 
     if (!response.ok) {
-        throw new Error(`Backend Error: ${response.statusText}`);
+        throw new Error(`Backend Error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     return data;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Luminous Brain Connection Error:", error);
     
-    // Diagnostic Message
+    // Detailed Diagnostic Message
     let errorMsg = "Cannot reach the Luminous Backend Server.";
     
-    // Check if we are using the proxy but it failed (likely backend is down)
-    if (BACKEND_URL === '/api') {
-        errorMsg = "Proxy Connect Failed. Ensure 'python3 server.py' is running on the VPS.";
-    } else if (IS_HTTPS && BACKEND_URL.startsWith('http:')) {
-        errorMsg = "SECURITY BLOCK: Browser blocked insecure HTTP request. Please refresh page.";
+    if (error.message === 'Failed to fetch' || error.message.includes('Load failed')) {
+        if (IS_HTTPS && BACKEND_URL !== '/api') {
+            errorMsg = "Security Block: Browser prevented connection to insecure IP. Clearing settings may fix this.";
+        } else {
+             errorMsg = "Connection Refused. Is the VPS running 'python3 server.py'?";
+        }
+    } else {
+        errorMsg = error.message;
     }
 
     return {
-      thought_process: "Connection to Neural Core lost.",
+      thought_process: "Neural Link Severed.",
       emotional_state: "Disconnected",
       state: "IDLE",
       response: `⚠️ SYSTEM ERROR: ${errorMsg}`,
