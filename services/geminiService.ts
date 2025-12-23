@@ -58,13 +58,28 @@ export const processLuminousCycle = async (
         body: JSON.stringify({
             input_text: input,
             current_state: currentState,
-            memory_context: JSON.stringify(memories),
+            memory_context: JSON.stringify(memories || {}),
             time_context: timeContext
         })
     });
 
     if (!response.ok) {
-        throw new Error(`Backend Error: ${response.status} ${response.statusText}`);
+        let errorDetails = response.statusText;
+        try {
+            // Try to read the error body (e.g., Python stack trace or API error message)
+            const errorText = await response.text();
+            if (errorText) {
+                // If it looks like HTML (Vercel error page), just give a summary
+                if (errorText.includes('<!DOCTYPE html>')) {
+                    errorDetails = `${response.status} Server Error (Proxy/Timeout)`;
+                } else {
+                    // It's likely a text/json error from Python
+                    errorDetails = `${response.status} - ${errorText.substring(0, 200)}`;
+                }
+            }
+        } catch (e) { /* ignore read error */ }
+
+        throw new Error(`Backend Failure: ${errorDetails}`);
     }
 
     const data = await response.json();
@@ -76,7 +91,9 @@ export const processLuminousCycle = async (
     // Detailed Diagnostic Message
     let errorMsg = "Cannot reach the Luminous Backend Server.";
     
-    if (error.message === 'Failed to fetch' || error.message.includes('Load failed')) {
+    if (error.message.includes('Backend Failure')) {
+        errorMsg = error.message;
+    } else if (error.message === 'Failed to fetch' || error.message.includes('Load failed')) {
         if (IS_HTTPS && BACKEND_URL !== '/api') {
             errorMsg = "Security Block: Browser prevented connection to insecure IP. Clearing settings may fix this.";
         } else {

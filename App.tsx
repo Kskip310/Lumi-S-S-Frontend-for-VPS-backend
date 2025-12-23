@@ -144,7 +144,15 @@ export default function App() {
     updateGem(GemType.KORE, { load: 60 });
 
     try {
-      const stm = await getShortTermMemory('luminous_context');
+      // Robust Memory Loading: Default to empty object if fetch fails to prevent backend 500s
+      let stm = {};
+      try {
+        const memoryResult = await getShortTermMemory('luminous_context');
+        if (memoryResult) stm = memoryResult;
+      } catch (err) {
+        console.warn("Failed to load short term memory, proceeding with empty context.");
+      }
+
       const timeCtx = getTemporalContext();
       
       const result = await processLuminousCycle(userInput, luminousState, stm, timeCtx);
@@ -186,8 +194,8 @@ export default function App() {
           setHeartRate(result.state === 'SLEEPING' ? 40 : 75);
         }
       }
-    } catch (e) {
-      addLog('System', 'CRITICAL FAILURE: Brain Unreachable.', 'error');
+    } catch (e: any) {
+      addLog('System', `CRITICAL FAILURE: ${e.message}`, 'error');
       console.error(e);
     } finally {
       setIsProcessing(false);
