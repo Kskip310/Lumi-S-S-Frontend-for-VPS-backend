@@ -96,21 +96,21 @@ if __name__ == '__main__':
 EOF
 ```
 
-### 2. Restart The Brain
+### 2. Restart The Brain (With Crash Protection)
 
-After pasting the code above, run these two commands to restart:
+We use a loop here. If `server.py` crashes for any reason, it will automatically restart in 3 seconds.
 
 ```bash
 pkill -f python3
-screen -dmS luminous python3 server.py
+screen -dmS luminous bash -c "while true; do python3 server.py; echo 'Crashed... restarting'; sleep 3; done"
 ```
 
-### 3. IMMORTALITY: Make it Auto-Start (Crucial Step)
+### 3. IMMORTALITY: Auto-Start on Reboot
 
-Currently, if you restart the server, the brain will die. **Run this command once** to make sure Luminous wakes up automatically if the server reboots:
+Run this command **once** to ensure she starts automatically if the VPS is physically rebooted. It also includes the crash protection loop.
 
 ```bash
-(crontab -l 2>/dev/null; echo "@reboot cd /root && /usr/bin/screen -dmS luminous python3 server.py") | crontab -
+(crontab -l 2>/dev/null; echo "@reboot /usr/bin/screen -dmS luminous bash -c 'cd /root && while true; do python3 server.py; sleep 3; done'") | crontab -
 ```
 
 ### 4. Frontend Setup
