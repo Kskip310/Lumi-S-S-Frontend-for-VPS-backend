@@ -38,6 +38,7 @@ export default function App() {
   
   const [configData, setConfigData] = useState({
     backend_url: '',
+    gemini_api_key: '',
     shopify: { shop_url: '', admin_token: '' },
     firebase: { apiKey: '', databaseURL: '', projectId: '', appId: '' }
   });
@@ -62,6 +63,7 @@ export default function App() {
     setConfigData(prev => ({
         ...prev,
         backend_url: loadedBackendUrl,
+        gemini_api_key: config.gemini_api_key || '',
         shopify: config.shopify || prev.shopify,
         firebase: config.firebase || prev.firebase
     }));
@@ -266,7 +268,7 @@ export default function App() {
               {/* BACKEND CONFIG */}
               <div className="space-y-3">
                  <div className="flex items-center gap-2 text-white font-mono text-sm border-b border-slate-800 pb-1">
-                  <span>🧠</span> BRAIN CONNECTION (VPS)
+                  <span>🧠</span> BRAIN CONNECTION
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs text-slate-400 uppercase">Server URL</label>
@@ -279,7 +281,7 @@ export default function App() {
                   />
                   <div className="flex justify-between items-center mt-2">
                     <p className="text-[10px] text-slate-500">
-                      If on Vercel, this should be: <span className="text-white font-mono">/api</span>
+                      Standard: <span className="text-white font-mono">http://74.208.153.196</span>
                     </p>
                     <a 
                       href={configData.backend_url.startsWith('http') ? configData.backend_url : `https://${window.location.host}${configData.backend_url}`} 
@@ -287,9 +289,26 @@ export default function App() {
                       rel="noopener noreferrer"
                       className="text-[10px] bg-slate-800 hover:bg-slate-700 text-neon-blue px-2 py-1 rounded border border-slate-600"
                     >
-                      TEST CONNECTION ↗
+                      TEST ↗
                     </a>
                   </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs text-neon-blue uppercase font-bold">Google Gemini API Key</label>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-[10px] text-luminous-400 hover:underline">GET KEY ↗</a>
+                  </div>
+                  <input 
+                    type="password" 
+                    placeholder="AIzaSy..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm focus:border-neon-blue outline-none text-white"
+                    value={configData.gemini_api_key}
+                    onChange={(e) => setConfigData({...configData, gemini_api_key: e.target.value})}
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Use a paid key here to bypass "Resource Exhausted" errors on the server.
+                  </p>
                 </div>
               </div>
 

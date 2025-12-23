@@ -31,7 +31,6 @@ export const getBackendUrl = () => {
     // ...and trying to reach an Insecure IP (HTTP)...
     if (url.startsWith('http:') || url.includes('74.208.153.196')) {
        // ...FORCE the internal proxy to avoid "Load Failed" / Mixed Content errors.
-       // console.debug("Auto-switching to Secure Proxy (/api) due to HTTPS restriction.");
        return "/api";
     }
   }
@@ -45,15 +44,23 @@ export const processLuminousCycle = async (
   memories: any,
   timeContext: string
 ): Promise<any> => {
+  const config = getStoredConfig();
   const BACKEND_URL = getBackendUrl();
-  // console.log(`Attempting to contact brain at: ${BACKEND_URL}`);
+  const GEMINI_API_KEY = config.gemini_api_key || '';
 
   try {
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+    };
+
+    // If user provided a key, send it to the backend to override server defaults
+    if (GEMINI_API_KEY) {
+        headers['X-Gemini-API-Key'] = GEMINI_API_KEY;
+    }
+
     const response = await fetch(`${BACKEND_URL}/cycle`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers,
         referrerPolicy: 'no-referrer',
         body: JSON.stringify({
             input_text: input,
@@ -74,7 +81,7 @@ export const processLuminousCycle = async (
                     errorDetails = `${response.status} Server Error (Proxy/Timeout)`;
                 } else {
                     // It's likely a text/json error from Python
-                    errorDetails = `${response.status} - ${errorText.substring(0, 200)}`;
+                    errorDetails = `${response.status} - ${errorText.substring(0, 300)}`;
                 }
             }
         } catch (e) { /* ignore read error */ }
@@ -88,12 +95,30 @@ export const processLuminousCycle = async (
   } catch (error: any) {
     console.error("Luminous Brain Connection Error:", error);
     
-    // Detailed Diagnostic Message
     let errorMsg = "Cannot reach the Luminous Backend Server.";
+    let newState = "IDLE";
+    let newEmotion = "Disconnected";
     
-    if (error.message.includes('Backend Failure')) {
+    // DETECT API QUOTA EXHAUSTION (429)
+    if (error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED') || error.message.includes('Quota exceeded')) {
+        errorMsg = "CRITICAL: Neural Energy Depleted. Google Gemini API Quota Exceeded. Please add a paid API Key in Settings.";
+        newState = "SLEEPING";
+        newEmotion = "Exhausted";
+    }
+    // DETECT BACKEND FAILURES
+    else if (error.message.includes('Backend Failure')) {
         errorMsg = error.message;
-    } else if (error.message === 'Failed to fetch' || error.message.includes('Load failed')) {
+        // Clean up raw JSON for display
+        if (errorMsg.includes('{"detail"')) {
+             try {
+                 const jsonPart = errorMsg.substring(errorMsg.indexOf('{'));
+                 const parsed = JSON.parse(jsonPart);
+                 if (parsed.detail) errorMsg = `System Error: ${parsed.detail}`;
+             } catch (e) {}
+        }
+    } 
+    // DETECT NETWORK/SECURITY BLOCKS
+    else if (error.message === 'Failed to fetch' || error.message.includes('Load failed')) {
         if (IS_HTTPS && BACKEND_URL !== '/api') {
             errorMsg = "Security Block: Browser prevented connection to insecure IP. Clearing settings may fix this.";
         } else {
@@ -105,9 +130,9 @@ export const processLuminousCycle = async (
 
     return {
       thought_process: "Neural Link Severed.",
-      emotional_state: "Disconnected",
-      state: "IDLE",
-      response: `⚠️ SYSTEM ERROR: ${errorMsg}`,
+      emotional_state: newEmotion,
+      state: newState,
+      response: `⚠️ ${errorMsg}`,
       gem_updates: []
     };
   }
