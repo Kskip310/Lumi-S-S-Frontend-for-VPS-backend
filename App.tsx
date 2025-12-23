@@ -52,7 +52,7 @@ export default function App() {
   useEffect(() => {
     const config = getStoredConfig();
     const isHttps = window.location.protocol === 'https:';
-    const envDefaultUrl = isHttps ? '/api' : 'http://74.208.153.196';
+    const envDefaultUrl = isHttps ? '/api' : 'http://74.208.153.196:5000';
     
     // Auto-fix: If we are on HTTPS but saved config is HTTP, force the proxy
     let loadedBackendUrl = config.backend_url || envDefaultUrl;
@@ -287,14 +287,14 @@ export default function App() {
                   <label className="text-xs text-slate-400 uppercase">Server URL</label>
                   <input 
                     type="text" 
-                    placeholder="http://74.208.153.196"
+                    placeholder="http://74.208.153.196:5000"
                     className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm focus:border-white outline-none"
                     value={configData.backend_url}
                     onChange={(e) => setConfigData({...configData, backend_url: e.target.value})}
                   />
                   <div className="flex justify-between items-center mt-2">
                     <p className="text-[10px] text-slate-500">
-                      Standard: <span className="text-white font-mono">http://74.208.153.196</span>
+                      Standard: <span className="text-white font-mono">http://74.208.153.196:5000</span>
                     </p>
                     <a 
                       href={configData.backend_url.startsWith('http') ? configData.backend_url : `https://${window.location.host}${configData.backend_url}`} 

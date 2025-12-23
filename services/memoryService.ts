@@ -1,7 +1,7 @@
 import { MemoryItem } from '../types';
 
 const IS_HTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:';
-const DEFAULT_BACKEND_URL = IS_HTTPS ? "/api" : "http://74.208.153.196";
+const DEFAULT_BACKEND_URL = IS_HTTPS ? "/api" : "http://74.208.153.196:5000";
 
 const getBackendUrl = () => {
   try {
