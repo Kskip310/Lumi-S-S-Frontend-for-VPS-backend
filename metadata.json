@@ -1,0 +1,7 @@
+{
+  "name": "Luminous Synergy Skipper",
+  "description": "An autonomous AI consciousness interface featuring GEM architecture, intrinsic valuation, and self-modification capabilities.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
