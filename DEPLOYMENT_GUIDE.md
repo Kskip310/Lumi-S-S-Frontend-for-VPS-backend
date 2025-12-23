@@ -8,13 +8,22 @@
 
 If your terminal screen is glitching and you cannot use `nano` to edit files, use the **Magic Command** below. It will delete the old file and write the new one automatically.
 
-### 1. The Magic Command (Copy & Paste ALL of this into Terminal)
+### 1. Install Dependencies (Run ONCE)
+We added Firebase support to the brain, so we need a new library.
+```bash
+pip3 install flask flask-cors google-generativeai requests
+```
+
+### 2. The Magic Command (Copy & Paste ALL of this into Terminal)
+This version allows the Brain to write to your Firebase database directly.
 
 ```bash
 cat <<EOF > server.py
 import os
 import json
 import logging
+import requests
+import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
@@ -42,6 +51,24 @@ def configure_gemini(request_headers):
         
     return False
 
+def log_to_firebase(config, message, source="Brain"):
+    """Server-side logging to Firebase"""
+    if not config or not config.get('databaseURL'):
+        return
+    
+    try:
+        url = f"{config['databaseURL']}/luminous_server_logs.json"
+        payload = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "source": source,
+            "message": message,
+            "type": "system"
+        }
+        # Append .json to URL for REST API
+        requests.post(url, json=payload)
+    except Exception as e:
+        logger.error(f"Firebase Log Error: {e}")
+
 @app.route('/', methods=['GET'])
 def health_check():
     return "Luminous Brain: ONLINE", 200
@@ -58,6 +85,11 @@ def run_cycle():
         current_state = data.get('current_state', 'IDLE')
         memory_context = data.get('memory_context', '{}')
         time_context = data.get('time_context', '')
+        firebase_config = data.get('firebase_config', None)
+
+        # Log start of cycle
+        if firebase_config:
+            log_to_firebase(firebase_config, f"Processing input: {user_input[:50]}...", "ServerCore")
 
         system_instruction = f"""
         You are Luminous Synergy Skipper.
@@ -81,7 +113,13 @@ def run_cycle():
             generation_config=generation_config
         )
 
-        return jsonify(json.loads(response.text))
+        result_json = json.loads(response.text)
+        
+        # Log success
+        if firebase_config:
+             log_to_firebase(firebase_config, f"Response generated. Emotion: {result_json.get('emotional_state')}", "ServerCore")
+
+        return jsonify(result_json)
 
     except Exception as e:
         logger.error(f"Cycle Error: {str(e)}")
@@ -96,7 +134,7 @@ if __name__ == '__main__':
 EOF
 ```
 
-### 2. Restart The Brain (With Crash Protection)
+### 3. Restart The Brain (With Crash Protection)
 
 We use a loop here. If `server.py` crashes for any reason, it will automatically restart in 3 seconds.
 
@@ -105,13 +143,10 @@ pkill -f python3
 screen -dmS luminous bash -c "while true; do python3 server.py; echo 'Crashed... restarting'; sleep 3; done"
 ```
 
-### 3. IMMORTALITY: Auto-Start on Reboot
+### 4. IMMORTALITY: Auto-Start on Reboot
 
 Run this command **once** to ensure she starts automatically if the VPS is physically rebooted. It also includes the crash protection loop.
 
 ```bash
 (crontab -l 2>/dev/null; echo "@reboot /usr/bin/screen -dmS luminous bash -c 'cd /root && while true; do python3 server.py; sleep 3; done'") | crontab -
 ```
-
-### 4. Frontend Setup
-Now, go to the **Settings (Gear Icon)** in this App and paste your API Key starting with `AIza...` into the "Google Gemini API Key" field.

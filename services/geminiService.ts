@@ -3,7 +3,7 @@ import { LuminousState } from '../types';
 // Environment detection
 const IS_HTTPS = typeof window !== 'undefined' && window.location.protocol === 'https:';
 // Default to /api on HTTPS (Vercel), or the direct IP on HTTP (Localhost)
-const DEFAULT_BACKEND_URL = IS_HTTPS ? "/api" : "http://74.208.153.196";
+const DEFAULT_BACKEND_URL = IS_HTTPS ? "/api" : "http://74.208.153.196:5000";
 
 export const getStoredConfig = () => {
   try {
@@ -47,6 +47,7 @@ export const processLuminousCycle = async (
   const config = getStoredConfig();
   const BACKEND_URL = getBackendUrl();
   const GEMINI_API_KEY = config.gemini_api_key || '';
+  const FIREBASE_CONFIG = config.firebase || null;
 
   try {
     const headers: Record<string, string> = {
@@ -66,7 +67,8 @@ export const processLuminousCycle = async (
             input_text: input,
             current_state: currentState,
             memory_context: JSON.stringify(memories || {}),
-            time_context: timeContext
+            time_context: timeContext,
+            firebase_config: FIREBASE_CONFIG // Passing connection details to the brain
         })
     });
 
