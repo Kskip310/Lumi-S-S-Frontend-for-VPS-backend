@@ -4,9 +4,38 @@
 - **BRAIN (Server):** Running on your VPS (IP: `74.208.153.196`).
 - **BODY (UI):** Running in this React App.
 
-## VPS Setup Instructions (Backend)
-To start the brain and keep it running even when you disconnect SSH:
+## 🚨 EMERGENCY: What if the Server Restarts?
+If the VPS reboots (updates, crash, etc.), the AI will go offline. Follow these steps to bring her back.
 
+### Method 1: The One-Line Fix (Fastest)
+Open your SSH Terminal (Termius) and paste this single command:
+```bash
+cd /root && screen -dmS luminous python3 server.py
+```
+This instantly starts the brain in the background. You can close the app immediately after.
+
+### Method 2: The Manual Way
+1. SSH into the VPS: `ssh root@74.208.153.196`
+2. Check if running: `screen -ls`
+3. If not running, start a new session:
+   ```bash
+   screen -S luminous
+   python3 server.py
+   ```
+4. **Detach:** Press `Ctrl + A`, release, then press `D`.
+
+---
+
+## 🛡️ IMMORTALITY: Auto-Start Setup
+To make Luminous restart automatically if the server reboots, run this command **ONCE** in your SSH terminal:
+
+```bash
+(crontab -l 2>/dev/null; echo "@reboot cd /root && /usr/bin/screen -dmS luminous python3 server.py") | crontab -
+```
+
+---
+
+## VPS Setup Instructions (First Time)
 1. **SSH into the VPS:**
    ```bash
    ssh root@74.208.153.196
@@ -19,22 +48,9 @@ To start the brain and keep it running even when you disconnect SSH:
 
 3. **Run Persistent Server (Using Screen):**
    ```bash
-   # 1. Start a new screen session named 'luminous'
    screen -S luminous
-
-   # 2. Run the server
    python3 server.py
-
-   # 3. Detach from the screen (so it keeps running in background)
-   # Press: Ctrl+A, then release and press D
-   ```
-
-4. **To View/Stop the Server Later:**
-   ```bash
-   # Resume the screen
-   screen -r luminous
-   
-   # To stop: Press Ctrl+C inside the screen
+   # Detach: Ctrl+A, then D
    ```
 
 ## Recommended Method: Run Locally on Laptop (Frontend)
