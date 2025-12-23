@@ -46,7 +46,7 @@ export const Terminal: React.FC<TerminalProps> = ({ logs, codeSnippet }) => {
         
         {codeSnippet && (
           <div className="mt-4 p-3 bg-slate-900 border border-luminous-900 rounded text-luminous-100 whitespace-pre-wrap overflow-x-auto">
-            <div className="text-slate-500 mb-2 border-b border-slate-700 pb-1">>> SELF_MODIFICATION.py</div>
+            <div className="text-slate-500 mb-2 border-b border-slate-700 pb-1">&gt;&gt; SELF_MODIFICATION.py</div>
             {codeSnippet}
           </div>
         )}
