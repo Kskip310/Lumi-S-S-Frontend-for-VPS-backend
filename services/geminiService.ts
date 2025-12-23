@@ -20,8 +20,18 @@ export const getStoredConfig = () => {
 export const getBackendUrl = () => {
   const config = getStoredConfig();
   // Remove trailing slash if present
-  const url = config.backend_url || DEFAULT_BACKEND_URL;
-  return url.replace(/\/$/, "");
+  let url = config.backend_url || DEFAULT_BACKEND_URL;
+  url = url.replace(/\/$/, "");
+
+  // CRITICAL FIX: Mixed Content Protection
+  // If we are on HTTPS (Vercel) but the URL is HTTP (Direct IP),
+  // the browser will block the request. We MUST force the /api proxy.
+  if (IS_HTTPS && url.startsWith('http:')) {
+    console.warn("Security Override: Mixed Content blocked. Switching to /api proxy.");
+    return "/api";
+  }
+
+  return url;
 };
 
 export const processLuminousCycle = async (
@@ -59,10 +69,11 @@ export const processLuminousCycle = async (
     // Diagnostic Message
     let errorMsg = "Cannot reach the Luminous Backend Server.";
     
-    if (IS_HTTPS && BACKEND_URL.startsWith('http:')) {
-      errorMsg = "SECURITY BLOCK: You are on HTTPS but trying to reach HTTP directly. Please clear your Browser Cache/Settings to reset to the '/api' proxy.";
-    } else {
-      errorMsg = "Check that 'python3 server.py' is running on your VPS.";
+    // Check if we are using the proxy but it failed (likely backend is down)
+    if (BACKEND_URL === '/api') {
+        errorMsg = "Proxy Connect Failed. Ensure 'python3 server.py' is running on the VPS.";
+    } else if (IS_HTTPS && BACKEND_URL.startsWith('http:')) {
+        errorMsg = "SECURITY BLOCK: Browser blocked insecure HTTP request. Please refresh page.";
     }
 
     return {

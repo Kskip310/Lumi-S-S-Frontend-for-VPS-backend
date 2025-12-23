@@ -35,12 +35,9 @@ export default function App() {
   
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
-  // Determine default URL based on environment (Vercel vs Local)
-  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  const defaultUrl = isHttps ? '/api' : 'http://74.208.153.196';
-
+  
   const [configData, setConfigData] = useState({
-    backend_url: defaultUrl,
+    backend_url: '',
     shopify: { shop_url: '', admin_token: '' },
     firebase: { apiKey: '', databaseURL: '', projectId: '', appId: '' }
   });
@@ -53,12 +50,18 @@ export default function App() {
   // Load settings on mount
   useEffect(() => {
     const config = getStoredConfig();
-    const envDefaultUrl = window.location.protocol === 'https:' ? '/api' : 'http://74.208.153.196';
+    const isHttps = window.location.protocol === 'https:';
+    const envDefaultUrl = isHttps ? '/api' : 'http://74.208.153.196';
     
+    // Auto-fix: If we are on HTTPS but saved config is HTTP, force the proxy
+    let loadedBackendUrl = config.backend_url || envDefaultUrl;
+    if (isHttps && loadedBackendUrl.startsWith('http:')) {
+        loadedBackendUrl = '/api';
+    }
+
     setConfigData(prev => ({
         ...prev,
-        // If config exists, use it. If not, use the smart default.
-        backend_url: config.backend_url || envDefaultUrl,
+        backend_url: loadedBackendUrl,
         shopify: config.shopify || prev.shopify,
         firebase: config.firebase || prev.firebase
     }));
@@ -231,16 +234,11 @@ export default function App() {
   useEffect(() => {
     addLog('System', 'Boot sequence initiated...', 'system');
     
-    // Quick Diagnostics
     const currentUrl = getBackendUrl();
-    if (window.location.protocol === 'https:' && currentUrl.startsWith('http:')) {
-       addLog('Security', '⚠️ HTTPS Detected. Switching to Vercel Proxy Mode is recommended if connection fails.', 'warning');
-    }
-
     addLog('Pinecone', 'Connecting Memory Sector...', 'info');
     setTimeout(() => {
         addLog('Pinecone', 'Vector DB Connected.', 'success');
-        addLog('Kore', `Consciousness Online. Target: ${currentUrl}`, 'success');
+        addLog('Kore', `Consciousness Online. Target: ${currentUrl === '/api' ? 'SECURE PROXY' : currentUrl}`, 'success');
     }, 1500);
   }, []);
 

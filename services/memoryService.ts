@@ -6,11 +6,21 @@ const DEFAULT_BACKEND_URL = IS_HTTPS ? "/api" : "http://74.208.153.196";
 const getBackendUrl = () => {
   try {
     const saved = localStorage.getItem('luminous_config');
+    let url = DEFAULT_BACKEND_URL;
+    
     if (saved) {
       const config = JSON.parse(saved);
-      const url = config.backend_url || DEFAULT_BACKEND_URL;
-      return url.replace(/\/$/, "");
+      if (config.backend_url) url = config.backend_url;
     }
+    
+    url = url.replace(/\/$/, "");
+
+    // CRITICAL FIX: Mixed Content Protection
+    if (IS_HTTPS && url.startsWith('http:')) {
+      return "/api";
+    }
+    
+    return url;
   } catch (e) {
     console.error("Config Read Error", e);
   }
